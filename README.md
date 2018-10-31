@@ -7,4 +7,4 @@ Since most docker-hub descriptions contain examples as docker-run commands, I am
 I know it is far from complete, but I will add features when I need them. Feel free to add pull-requests.
 
 May be used directly from 
-https://t-oster.github.io/DockerComposeGenerator/
+https://t-oster.github.io/DockerComposeGenerator/index.html
