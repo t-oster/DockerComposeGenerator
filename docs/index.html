@@ -67,6 +67,14 @@
                             match = src.match(regex);
                         }
                         
+                        var network_mode = false;
+                        var match = src.match(/--net=([a-z]*)/);
+                        if (match) {
+                            console.log("Match: "+JSON.stringify(match));
+                            network_mode = match[1];
+                            src = src.replace(match[0], "");
+                        }
+                        
                         var imagename = src.trim().split(" ").reverse()[0];
                         var servicename = imagename.split("/").reverse()[0];
                         
@@ -92,6 +100,9 @@
                             ko.utils.arrayForEach(environment, function(e){
                                 line("- "+e, 3);
                             });
+                        }
+                        if (network_mode) {
+                            line("network_mode: \""+network_mode+"\"", 2);
                         }
                         return result;
                     });
