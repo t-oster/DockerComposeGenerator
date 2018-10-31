@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Generate docker-compose.yml from docker run command</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" crossorigin="anonymous">
+
+    </head>
+    <body>
+        <div class="container">
+            <h1>Docker-Compose.yml generator</h1>
+            <small>Convertes a docker-run command into a docker-compose.yml file for the super lazy like me</small>
+            <form>
+                <div class="form-group">
+                    <label for="taSource">Docker run command:</label>
+                    <textarea class="form-control" id="taSource" rows="3" placeholder="docker run --...." data-bind="value: source"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="taResult">DockerCompose.yml</label>
+                    <textarea class="form-control" id="taResult" rows="3" placeholder="result." data-bind="value: result"></textarea>
+                </div>
+                <a class="btn btn-primary" data-bind="click: download">Download</a>
+            </form>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js" crossorigin="anonymous"></script>
+        <script src="lib/FileSaver.min.js" crossorigin="anonymous"></script>
+        <script>
+            $(function () {
+                var ViewModel = function () {
+                    var self = this;
+                    self.source = ko.observable("docker run -d --net=host \
+  -p 8200:8200 \
+  -v <media dir on host>:/media/audio \
+  -v <media dir on host>:/media/video \
+  -e MINIDLNA_MEDIA_DIR_1=A,/media/audio \
+  -e MINIDLNA_MEDIA_DIR_2=V,/media/video \
+  -e MINIDLNA_FRIENDLY_NAME=MyMini \
+  vladgh/minidlna");
+                    self.result = ko.pureComputed(function () {
+                        var src = self.source().replace(/[\\\n\r]/g, "");
+                        var result = "";
+                        var line = function(content, indent) {
+                            result += " ".repeat(4*indent)+content+"\n";
+                        }
+                        var regex = /(-([a-zA-Z]) (([^-]*)[=:]([^- ]*)))/;
+                        var match = src.match(regex);
+                        
+                        var ports = [];
+                        var volumes = [];
+                        var environment = [];
+                        while (match) {
+                            console.log("Match: "+JSON.stringify(match));
+                            if (match[2] === "p") {
+                                ports.push(match[3].trim());
+                            }
+                            else if (match[2] === "v") {
+                                volumes.push(match[3].trim());
+                            }
+                            else if (match[2] === "e") {
+                                environment.push(match[3].trim());
+                            }
+                            src = src.replace(match[0], "");
+                            match = src.match(regex);
+                        }
+                        
+                        var imagename = src.trim().split(" ").reverse()[0];
+                        var servicename = imagename.split("/").reverse()[0];
+                        
+                        
+                        line("version: '2'");
+                        line("services:");
+                        line(servicename+":", 1);
+                        line("image: "+imagename, 2);
+                        if (ports.length) {
+                            line("ports:", 2);
+                            ko.utils.arrayForEach(ports, function(p){
+                                line("- \""+p+"\"", 3);
+                            });
+                        }
+                        if (volumes.length) {
+                            line("volumes:", 2);
+                            ko.utils.arrayForEach(volumes, function(v){
+                                line("- "+v, 3);
+                            });
+                        }
+                        if (environment.length) {
+                            line("environment:", 2);
+                            ko.utils.arrayForEach(environment, function(e){
+                                line("- "+e, 3);
+                            });
+                        }
+                        return result;
+                    });
+                    self.download = function () {
+                        var blob = new Blob([self.result()], {type: "text/plain;charset=utf-8"});
+                        saveAs(blob, "docker-compose.yml");
+                    };
+                };
+                ko.applyBindings(new ViewModel());
+            });
+        </script>
+    </body>
+</html>
